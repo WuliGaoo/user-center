@@ -1,7 +1,7 @@
 package com.yupi.usercenter.mapper;
 
-import com.yupi.usercenter.model.domain.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yupi.usercenter.model.domain.User;
 
 // Mapper接口，它继承自MyBatis-Plus的BaseMapper接口，并指定你的实体类作为泛型参数。
 // 可以使用BaseMapper中定义的所有方法，包括save方法

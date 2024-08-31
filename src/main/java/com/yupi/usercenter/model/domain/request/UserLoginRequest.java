@@ -9,7 +9,8 @@ import java.io.Serializable;
  *
  * @author WuliGao
  */
-@Data
+@Data //才能使用get，set方法
+// 序列化后返回Json格式
 public class UserLoginRequest implements Serializable {
 
     private static final long serialVersionUID = 7851750037521868036L;

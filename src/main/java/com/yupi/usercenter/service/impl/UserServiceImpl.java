@@ -1,5 +1,4 @@
 package com.yupi.usercenter.service.impl;
-import java.util.Date;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -15,6 +14,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.yupi.usercenter.contant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 用户服务实现类
@@ -36,7 +37,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 用户登录态键
      */
-    private static final String USER_LOGIN_STATE = "userLoginState";
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
@@ -75,12 +75,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 插入用户到数据库
         boolean result = save(user); // 使用MyBatis-Plus的save方法插入数据
         if (result) {
+            log.info(user.getUserAccount()+":已注册");
             return user.getId(); // 假设User类有一个getId()方法返回主键ID
         } else {
+            log.info(user.getUserName()+"：注册失败");
             return -1; // 插入失败
         }
     }
 
+    /**
+     *
+     * @param userAccount  用户账户
+     * @param userPassword 用户密码
+     * @param request 获取请求信息：HttpServletRequest对象包含了客户端发送的所有请求信息，比如请求头（Headers）、参数（Parameters）、cookies等。尽管@RequestBody已经处理了请求体中的JSON或XML数据并将其转换为UserLoginRequest对象
+     * @return
+     */
     @Override
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
@@ -102,34 +111,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         // 对密码进行加密
         String encryPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
-        // 检查账户是否已存在
+
+        // 从数据库中，检查账户是否已存在
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
         queryWrapper.eq("userPassword", encryPassword);
         User user = userMapper.selectOne(queryWrapper);
         //用户不存在
         if (user == null) {
-            log.info("user login failed, userAccount match userPassword");
+            log.info("user login failed, userAccount don't match userPassword");
             return null;
         }
 
-        //用户脱敏
-        User safetyUser =  new User();
-        safetyUser.setId(user.getId());
-        safetyUser.setUserName(user.getUserName());
-        safetyUser.setUserAccount(user.getUserAccount());
-        safetyUser.setAvatarUrl(user.getAvatarUrl());
-        safetyUser.setGender(user.getGender());
-        safetyUser.setPhone(user.getPhone());
-        safetyUser.setEmail(user.getEmail());
-        safetyUser.setUserStatus(user.getUserStatus());
-        safetyUser.setCreateTime(user.getCreateTime());
-
+        User safetyUser = getSafetyUser(user);
         //记录用户的登录态
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
+        log.info(request.getSession().getId());
         log.info("user "+ user.getUserAccount() +" login Passed");
         return safetyUser;
     }
+
+    /**
+     *
+     * @param originUser
+     * @return 脱敏用户
+     */
+    @Override
+    public User getSafetyUser(User originUser){
+        //用户脱敏
+        User safetyUser =  new User();
+        safetyUser.setId(originUser.getId());
+        safetyUser.setUserName(originUser.getUserName());
+        safetyUser.setUserAccount(originUser.getUserAccount());
+        safetyUser.setAvatarUrl(originUser.getAvatarUrl());
+        safetyUser.setGender(originUser.getGender());
+        safetyUser.setUserRole(originUser.getUserRole());
+        safetyUser.setPhone(originUser.getPhone());
+        safetyUser.setEmail(originUser.getEmail());
+        safetyUser.setUserStatus(originUser.getUserStatus());
+        safetyUser.setCreateTime(originUser.getCreateTime());
+        return safetyUser;
+    }
+
 }
 
 
